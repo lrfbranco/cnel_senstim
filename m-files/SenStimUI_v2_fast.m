@@ -1,5 +1,5 @@
 
-classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
+classdef SenStimUI_v2_fast < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
@@ -40,6 +40,8 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
         ExtrasPanel                     matlab.ui.container.Panel
         BipolarCheckBox                 matlab.ui.control.CheckBox
         CathodicFirstCheckBox           matlab.ui.control.CheckBox
+        RampEditField                   matlab.ui.control.NumericEditField
+        RampCheckBox                    matlab.ui.control.CheckBox
         ControlPanel                    matlab.ui.container.Panel
         ReadyCheckBox                   matlab.ui.control.CheckBox
         GoButton                        matlab.ui.control.Button
@@ -59,28 +61,29 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
         Ax_stimWave                     matlab.ui.control.UIAxes
     end
 
-
+    
     % ===========================================================================================
     % v2.0
     % Known Issues / Bugs:
-    % - Front End selection doesnt check if the appropriate FE is selected. The user needs to 
+    % - Front End selection doesnt check if the appropriate FE is selected. The user needs to
     % make sure these match.
     % ===========================================================================================
     properties (Access = private)
         ElecsStim
         ElecsBipo
-        Frequency 
-        Amplitude   
-        Duration    
-        BurstLen    
-        InterBurLen 
-        PreStimLen  
-        PulseWidth  
-        InterPulLen 
+        Frequency
+        Amplitude
+        Duration
+        BurstLen
+        InterBurLen
+        PreStimLen
+        PulseWidth
+        InterPulLen
         PlotCursor
         NIPisConnected
         CompleteStimDuration
         StimCmdPreStim
+        StimCmdRamp
         StimCmdBurst
         StimCmdBurstBipo
         StimCmdGap
@@ -92,7 +95,7 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
         StopButtonWasPushed
         FileName
         LogFolder
-
+        
         FilePath
         LogRowCounter
         LogStartTime
@@ -102,17 +105,17 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
         PrevStimCmd
         PrevWait
     end
-
-    methods (Access = private)
     
+    methods (Access = private)
+        
         function UpdateStatusPanel(app)
             % === Main status ===
             app.DemoModeLabel.FontColor = 'k';
             if app.DemoCheckBox.Value
                 app.DemoModeLabel.Text = 'Demo Mode';
             else
-%                 app.DemoModeLabel.Text = 'Connecting to NIP...';
-%                 pause(0.01);
+                %                 app.DemoModeLabel.Text = 'Connecting to NIP...';
+                %                 pause(0.01);
                 if (TryConnectToNIP(app))
                     app.DemoModeLabel.Text = 'Connected to NIP.';
                     app.DemoModeLabel.FontColor = 'g';
@@ -169,7 +172,7 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
             end
             
             app.SummarySettings.Text = summaryString;
-                
+            
             % === Multi Stim  ===
             if ~isempty(app.MultiStim)
                 multiStimString = 'Multiple Stims loaded !';
@@ -198,14 +201,14 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
             UpdateStimComplete(app);
             UpdateStimBurst(app);
             UpdateStimWave(app);
-%             disp('Plots updated')
+            %             disp('Plots updated')
         end
         
         function UpdateStimComplete(app)
             % Define stimwave
             stimWave_y = [app.Amplitude app.Amplitude ...
-                          0 0 ...
-                         -app.Amplitude -app.Amplitude];
+                0 0 ...
+                -app.Amplitude -app.Amplitude];
             stimWave_y = [stimWave_y 0 0];
             
             stimWave_x = [0 app.PulseWidth];
@@ -251,7 +254,7 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
                 x = [-app.PreStimLen*1e-3 0 x];
             end
             
-            % Plot 
+            % Plot
             cla(app.Ax_stimComplete)
             plot(app.Ax_stimComplete,x,y,'LineWidth',.5)
             hold(app.Ax_stimComplete,'on')
@@ -262,7 +265,7 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
             
             app.PlotCursor = plot(app.Ax_stimComplete,[0 0],app.Ax_stimComplete.YLim,'r--',...
                 'LineWidth',2.15,'Visible','off');
-            app.CompleteStimDuration = x(end) + abs(x(1)); 
+            app.CompleteStimDuration = x(end) + abs(x(1));
             app.CompleteStimDuration = ceil(app.CompleteStimDuration*1e3)*1e-3; % Round to nearest milisecond
             
             if sum(x)==0
@@ -274,8 +277,8 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
         
         function UpdateStimBurst(app)
             stimWave_y = [app.Amplitude app.Amplitude ...
-                          0 0 ...
-                         -app.Amplitude -app.Amplitude];
+                0 0 ...
+                -app.Amplitude -app.Amplitude];
             stimWave_y = [stimWave_y 0 0];
             
             stimWave_x = [0 app.PulseWidth];
@@ -305,8 +308,8 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
             
             % Add Interburst gap
             if app.InterBurLen ~= 0
-%                 y = [y 0 0];
-%                 x = [x x(end)+[0 app.InterBurLen*1e-3]];
+                %                 y = [y 0 0];
+                %                 x = [x x(end)+[0 app.InterBurLen*1e-3]];
                 y = [y 0];
                 x(end) = [];
                 x = [x x(end)+[0 app.InterBurLen*1e-3]];
@@ -314,13 +317,13 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
             
             x = x*1e3;
             
-            % Plot 
+            % Plot
             cla(app.Ax_stimBurst)
             plot(app.Ax_stimBurst,x,y,'LineWidth',2)
             hold(app.Ax_stimBurst,'on')
             
-%             pan(app.Ax_stimBurst,'on');          % or 'off'
-%             zoom(app.Ax_stimBurst,'on');         % or 'off'
+            %             pan(app.Ax_stimBurst,'on');          % or 'off'
+            %             zoom(app.Ax_stimBurst,'on');         % or 'off'
             
             if app.PreStimLen ~= 0
                 plot(app.Ax_stimBurst,x(1:2),y(1:2),'LineWidth',2,'Color',[0.4660, 0.6740, 0.1880])
@@ -357,7 +360,7 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
                 plot(app.Ax_stimWave,x,-y,'LineWidth',2,'DisplayName',sprintf('Elec: %d',app.ElecsBipo))
             end
             legend(app.Ax_stimWave);
-                
+            
             
             if sum(x)==0
                 app.Ax_stimWave.XLim = [-1 1];
@@ -382,30 +385,30 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
             end
             app.PlotCursor.Visible = 'on';
             app.PlotCursor.XData = [app.Ax_stimComplete.XLim(1) app.Ax_stimComplete.XLim(1)]; % Reset to initial pos
-%             pause(0.1)
+            %             pause(0.1)
             
             % Prepare next timer
             timerPeriod = app.Duration*.01; % Percentage of duration
-%             timerPeriod = 1;
+            %             timerPeriod = 1;
             timerPeriod = max(timerPeriod, 0.05); % Make sure to not go below 10 ms
             timerPlayPlot =  timer('Name','timerPlayPlot');
             startDelay = round(app.CompleteStimDuration*1.1,3);
             % This timer has a 'StartFcn' that waits enough time to run the entire plot then kills the timer with another 'singleShot' timer
             set(timerPlayPlot,...
                 'StartFcn', @(~,~)...
-                    start(timer('Name','tStop','ExecutionMode','singleShot','StartDelay',startDelay,...% Add an offset afterwards to make sure stim has ended.
-                        'TimerFcn',@(~,~)...
-                            stop(timerfind('Name','timerPlayPlot'))...
-                        )),...
+                start(timer('Name','tStop','ExecutionMode','singleShot','StartDelay',startDelay,...% Add an offset afterwards to make sure stim has ended.
+                'TimerFcn',@(~,~)...
+                stop(timerfind('Name','timerPlayPlot'))...
+                )),...
                 'ExecutionMode','FixedRate',...
                 'Period',timerPeriod,...
                 'BusyMode','queue',...
                 'StartDelay',timerPeriod,...
                 'TimerFcn',@(~,~) ...
-                        set(app.PlotCursor,'XData', app.PlotCursor.XData + timerPeriod)...
-                    );
-                %get(timerfind('Name','timerPlayPlot'),'Period')
-                
+                set(app.PlotCursor,'XData', app.PlotCursor.XData + timerPeriod)...
+                );
+            %get(timerfind('Name','timerPlayPlot'),'Period')
+            
             % =================== %
             start(timerPlayPlot);
             % =================== %
@@ -431,7 +434,7 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
                 app.NIPisConnected = true;
                 result = true;
                 app.PrevTimeNIP = xippmex('time');
-%                 pause(0.01);
+                %                 pause(0.01);
             end
         end
         
@@ -474,6 +477,7 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
         
         function UpdateStimCmd(app)
             app.StimCmdPreStim   = [];
+            app.StimCmdRamp = [];
             app.StimCmdBurst     = [];
             app.StimCmdBurstBipo = [];
             app.StimCmdGap       = [];
@@ -484,6 +488,7 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
             baseCmd.action   = 'allcyc';
             
             app.StimCmdPreStim   = baseCmd;
+            app.StimCmdRamp = baseCmd;
             app.StimCmdBurst     = baseCmd;
             app.StimCmdBurstBipo = baseCmd;
             app.StimCmdGap       = baseCmd;
@@ -510,10 +515,63 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
             % === StimCmdBurst ===
             len_PW = round((app.PulseWidth*1e-6)/NIP_timeUnits);
             len_IPW = round((app.InterPulLen*1e-6)/NIP_timeUnits);
-            stimAmp = round(abs((app.Amplitude*1e3)/app.StepSizeCurrent));
+            stimAmp = round(abs((app.Amplitude*1e3)/app.StepSizeCurrent), 3);
             
             polarity = ~app.CathodicFirstCheckBox.Value;
             
+            %Ramp section
+            if (app.RampCheckBox.Value == 1)
+                ramp_n_pulse = double(app.RampEditField.Value);
+                ramp_amps = linspace(0, app.Amplitude, ramp_n_pulse + 2).';
+                ramp_amps(1) = [];
+                ramp_amps(end) = [];
+                
+                %Create ramp amplitudes
+                for i = 1:length(ramp_amps)
+                    ramp_amps(i) = round(ramp_amps(i)/(app.StepSizeCurrent*1e-3));
+                end
+                
+                %Create ramp pulses
+                for i = 1:length(ramp_amps)
+                    app.StimCmdRamp.seq(4*i - 3) = struct(...
+                        'length', len_PW,...
+                        'ampl', ramp_amps(i),...
+                        'pol', double(polarity), ...
+                        'fs', fastSettle,...
+                        'enable', 1,...
+                        'delay', 0,...
+                        'ampSelect', 1);
+                    app.StimCmdRamp.seq(4*i - 2) = struct(...
+                        'length', len_IPW,...
+                        'ampl', 0,...
+                        'pol', double(polarity), ...
+                        'fs', fastSettle,...
+                        'enable', 0,...
+                        'delay', 0,...
+                        'ampSelect', 1);
+                    app.StimCmdRamp.seq(4*i - 1) = struct(...
+                        'length', len_PW,...
+                        'ampl', ramp_amps(i),...
+                        'pol', double(~polarity), ...
+                        'fs', fastSettle,...
+                        'enable', 1,...
+                        'delay', 0,...
+                        'ampSelect', 1);
+                    app.StimCmdRamp.seq(4*i) = struct(...
+                        'length', round(1/(app.Frequency * NIP_timeUnits) - 3*len_PW),...
+                        'ampl', 0,...
+                        'pol', double(~polarity), ...
+                        'fs', fastSettle,...
+                        'enable', 1,...
+                        'delay', 0,...
+                        'ampSelect', 1);
+                end
+                
+                app.StimCmdRamp.period = sum([app.StimCmdRamp.seq.length]);
+                app.StimCmdRamp.repeats = 1;
+            end
+            
+            %Burst section
             app.StimCmdBurst.seq(1) = struct(...
                 'length', len_PW,...
                 'ampl', stimAmp,...
@@ -539,10 +597,13 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
                 'delay', 0,...
                 'ampSelect', 1);
             
-            app.StimCmdBurst.period   = 1/(app.Frequency * NIP_timeUnits); 
-%             app.StimCmdBurst.repeats  = ceil(app.Frequency * app.BurstLen);
-            app.StimCmdBurst.repeats  = app.Frequency * app.BurstLen;
-            
+            app.StimCmdBurst.period   = 1/(app.Frequency * NIP_timeUnits);
+            %             app.StimCmdBurst.repeats  = ceil(app.Frequency * app.BurstLen);
+            if (app.RampCheckBox.Value == 1)
+                app.StimCmdBurst.repeats  = app.Frequency * app.BurstLen - ramp_n_pulse;
+            else
+                app.StimCmdBurst.repeats  = app.Frequency * app.BurstLen;
+            end
             if app.BipolarCheckBox.Value && ~isempty(app.ElecsBipo)
                 app.StimCmdBurstBipo = app.StimCmdBurst;
                 app.StimCmdBurstBipo.elec = app.ElecsBipo;
@@ -572,62 +633,66 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
             if ~app.DemoCheckBox.Value
                 LockScreenParams(app);
                 xippmex('stim', 'enable', 0); % disable stim
-%                 pause(0.2);
+                %                 pause(0.2);
                 dropDownItems = cell2mat(cellfun(@str2num,app.StepSizeDropDown.Items,'Uni',0));
                 idx = find(app.StepSizeCurrent==dropDownItems);
                 try
                     xippmex('stim','res', app.ElecsStim, idx); % update
                 catch
                     msg = sprintf('Could not change Step Size (%d µA) on Elecs: (%d).\nPlease restart.',...
-                                app.StepSizeCurrent,app.ElecsStim);
+                        app.StepSizeCurrent,app.ElecsStim);
                     Abort(app,msg);
                     return
                 end
                 xippmex('stim', 'enable', 1); % enable stim
-%                 pause(0.2);
+                %                 pause(0.2);
                 UnlockScreenParams(app);
             end
         end
         
         function SendStim(app)
             % Preparing depending on Demo or not
-% %             app.StimCmdPreStim = []; % get rid of this for now
-% %             if app.DemoCheckBox.Value
-% %                 stimFullHandle = @(~,~) disp('DEMO: xippmex(''stimseq'', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap])');
-% %                 stimBlockHandle = @(~,~) disp('DEMO: xippmex(''stimseq'', [app.StimCmdBurst app.StimCmdGap])');
-% %             else    
-% %                 if app.InterburstLengthmsEditField.Value > 0 
-% %                     stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap]);
-% %                     stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst app.StimCmdGap]);
-% %                 else
-% %                     stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst]);
-% %                     stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst]);
-% %                 end
-% % %                 stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdBurstBipo app.StimCmdGap]);
-% % %                 stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst app.StimCmdBurstBipo app.StimCmdGap]);
-% %             end
-% %             
-% %             % Checking if we need scheduled stims or if they all fit into one burst
-% %             blockDuration = app.BurstLen + app.InterBurLen*1e-3; % block = (burst+gap)
-% %             timeRemainAfterInit = app.CompleteStimDuration - blockDuration;
-% %             if timeRemainAfterInit < 0 || (timeRemainAfterInit/blockDuration) < 1
-% %                 % No need for timers. Everything fits into one burst
-% %                 feval(stimFullHandle);
-% %                 % If not demo, equals => xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap])
-% %                 return
-% %             end
-%             persistent lastDurCyc
+            % %             app.StimCmdPreStim = []; % get rid of this for now
+            % %             if app.DemoCheckBox.Value
+            % %                 stimFullHandle = @(~,~) disp('DEMO: xippmex(''stimseq'', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap])');
+            % %                 stimBlockHandle = @(~,~) disp('DEMO: xippmex(''stimseq'', [app.StimCmdBurst app.StimCmdGap])');
+            % %             else
+            % %                 if app.InterburstLengthmsEditField.Value > 0
+            % %                     stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap]);
+            % %                     stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst app.StimCmdGap]);
+            % %                 else
+            % %                     stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst]);
+            % %                     stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst]);
+            % %                 end
+            % % %                 stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdBurstBipo app.StimCmdGap]);
+            % % %                 stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst app.StimCmdBurstBipo app.StimCmdGap]);
+            % %             end
+            % %
+            % %             % Checking if we need scheduled stims or if they all fit into one burst
+            % %             blockDuration = app.BurstLen + app.InterBurLen*1e-3; % block = (burst+gap)
+            % %             timeRemainAfterInit = app.CompleteStimDuration - blockDuration;
+            % %             if timeRemainAfterInit < 0 || (timeRemainAfterInit/blockDuration) < 1
+            % %                 % No need for timers. Everything fits into one burst
+            % %                 feval(stimFullHandle);
+            % %                 % If not demo, equals => xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap])
+            % %                 return
+            % %             end
+            %             persistent lastDurCyc
             
             while (xippmex('time') - app.PrevNIPClockCyc) < ...
-                (ceil(app.PrevStimCmd.period*app.PrevStimCmd.repeats) + app.WaitUntilNextStim*30000)
-                sleep(1);
+                    (ceil(app.PrevStimCmd.period*app.PrevStimCmd.repeats) + app.WaitUntilNextStim*30000)
+            sleep(1);
             end
             app.PrevNIPClockCyc = xippmex('time');
             app.PrevStimCmd = app.StimCmdBurst;
             app.PrevWait = app.WaitUntilNextStim;
-                
-                xippmex('stimseq', app.StimCmdBurst);
-return
+            
+            if (app.RampCheckBox.Value == 1)
+                xippmex('stimseq',  [app.StimCmdRamp app.StimCmdBurst]);
+            else
+                xippmex('stimseq',  app.StimCmdBurst);
+            end
+            return
             
             % === Preparation ===
             % Clear previous stim timers
@@ -647,23 +712,23 @@ return
             endDelay = round(timeRemainAfterInit - blockDuration/3,3); % Timer will END 1/3 of block before "complete stim" end time
             if startDelay > endDelay
                 msg = sprintf('Could not schedule timers properly (%.3f) > (%.3f).\nPlease restart.',...
-                            startDelay,endDelay);
+                    startDelay,endDelay);
                 Abort(app, msg);
             end
             timerStim =  timer('Name','timerStim');
             % This timer has a 'StartFcn' that waits enough time to run the entire plot then kills the timer with another 'singleShot' timer
             set(timerStim,...
                 'StartFcn', @(~,~)...
-                    start(timer('Name','tStopStim','ExecutionMode','singleShot','StartDelay',endDelay,...
-                        'TimerFcn',@(~,~)...
-                            stop(timerfind('Name','timerStim'))...
-                        )),...
+                start(timer('Name','tStopStim','ExecutionMode','singleShot','StartDelay',endDelay,...
+                'TimerFcn',@(~,~)...
+                stop(timerfind('Name','timerStim'))...
+                )),...
                 'ExecutionMode','FixedRate',...
                 'Period',timerPeriod,...
                 'BusyMode','queue',...
                 'StartDelay',startDelay,...
                 'TimerFcn',@(~,~) feval(stimBlockHandle)...
-                    );
+                );
             
             % === Sending Stims ===
             % Sending first burst
@@ -690,9 +755,9 @@ return
                 DeEmphasizeField(app,app.AmplitudemAEditField);
             end
         end
-    
+        
         function CheckAmplitudeFitsStepSize(app)
-            % The upper limit of stim amplitude varies with step size. If using the maximum 
+            % The upper limit of stim amplitude varies with step size. If using the maximum
             % step size, the amplitude can go up to 127 units. Otherwise, can go up to 100.
             dropDownItems = cell2mat(cellfun(@str2num,app.StepSizeDropDown.Items,'Uni',0));
             idx = find(app.StepSizeCurrent==dropDownItems);
@@ -703,7 +768,7 @@ return
             end
             
             stimAmp = abs((app.Amplitude*1e3)/app.StepSizeCurrent);
-%             disp(stimAmp)
+            %             disp(stimAmp)
             if stimAmp >= 1 && stimAmp <= upperLimit
                 % No need to adjust anything
                 return
@@ -731,7 +796,7 @@ return
                 end
                 stimAmp = abs((app.Amplitude*1e3)/newStepSize);
             end
-             
+            
             app.StepSizeDropDown.Value = num2str(newStepSize);
             CheckUpdateStepSizeDropDown(app);
         end
@@ -785,7 +850,7 @@ return
         function ret = StepSizeIsCorrect(app)
             dropDownItems = cell2mat(cellfun(@str2num,app.StepSizeDropDown.Items,'Uni',0));
             idx = find(app.StepSizeCurrent==dropDownItems);
-            stepSize_idx = xippmex('stim','res', app.ElecsStim); 
+            stepSize_idx = xippmex('stim','res', app.ElecsStim);
             if idx == stepSize_idx
                 ret = true;
             else
@@ -806,9 +871,9 @@ return
                     'Period',0.48,...
                     'BusyMode','queue',...
                     'TimerFcn',@(~,~) ...
-                            set(app.TimeLabel,'Text',split(datestr(now),' '))...
-                        );
-                    
+                    set(app.TimeLabel,'Text',split(datestr(now),' '))...
+                    );
+                
                 start(timerClock);
             catch
                 app.TimeLabel.Text='';
@@ -844,20 +909,20 @@ return
             if ~isempty(idx)
                 app.MultiStim.LoadedIdx = idx;
                 app.SettingsPanel.Title = sprintf('Settings - Multi Stim (%d out of %d).',idx,app.MultiStim.NumOfStims);
-
+                
             end
         end
         
         function UnlockScreenParamsWithTimer(app)
             start(timer('Name','reEnableUI','ExecutionMode','singleShot','StartDelay',app.CompleteStimDuration,...
                 'TimerFcn',@(~,~)...
-                    set(findobj(app.UIFigure,'Tag','EditableFields'),'Enable','on')...
+                set(findobj(app.UIFigure,'Tag','EditableFields'),'Enable','on')...
                 ))
             
             if ~app.BipolarCheckBox.Value
                 start(timer('Name','disableBipoUI','ExecutionMode','singleShot','StartDelay',app.CompleteStimDuration+0.020,...
                     'TimerFcn',@(~,~)...
-                        set(app.ListBoxBipolarElectrodes, 'Enable', 'off')...
+                    set(app.ListBoxBipolarElectrodes, 'Enable', 'off')...
                     ))
             end
         end
@@ -879,8 +944,8 @@ return
             t_ = getQPTime;
             while(getQPTime - t_ < (t))
                 sleep(1);
-                if app.StopButtonWasPushed 
-                    return 
+                if app.StopButtonWasPushed
+                    return
                 end
             end
         end
@@ -906,8 +971,8 @@ return
                     'Period',1,...
                     'BusyMode','queue',...
                     'TimerFcn',@(~,~) ...
-                            feval(changeLabelHandle,app.CurrStatusLabel.UserData)...
-                        );
+                    feval(changeLabelHandle,app.CurrStatusLabel.UserData)...
+                    );
                 timerUpdateCurrTimeLeft = timerfind('Name','timerUpdateCurrTimeLeft');
                 if ~isempty( timerUpdateCurrTimeLeft )
                     stop(timerUpdateCurrTimeLeft);
@@ -920,9 +985,9 @@ return
                     'StartDelay',1,...
                     'BusyMode','queue',...
                     'TimerFcn',@(~,~) ...
-                            set(app.CurrStatusLabel,'UserData',app.CurrStatusLabel.UserData-1)...
-                        );
-                    
+                    set(app.CurrStatusLabel,'UserData',app.CurrStatusLabel.UserData-1)...
+                    );
+                
                 start(timerUpdateCurrTimeLeft);
                 start(timerStatLabel);
             catch
@@ -953,19 +1018,19 @@ return
             %     fname = [fname '_' num2str(id) '.txt'];
             %     id = id +1;
             % end
-            % 
+            %
             % if app.CathodicFirstCheckBox.Value
             %     strCathAnode = 'Cathodic First';
             % else
             %     strCathAnode = 'Anodic First';
             % end
-            % 
+            %
             % str = [sprintf('Freq: %d Hz\nAmpl: %.3f mA\nElectr: %d\nDuration: %.3f s\n',app.Frequency,abs(app.Amplitude),app.ElecsStim,app.Duration) ...
             %       sprintf('Burst Length: %.3f s\nInterBurst Length (gaps): %.3f ms\n',app.BurstLen, app.InterBurLen)...
             %       sprintf('PreStim Wait: %.3f ms\nPulseWidth: %.3f µs\n',app.PreStimLen,app.PulseWidth)...
             %       sprintf('InterPulseWidth: %.3f µs\nStepSize: %d µA\n%s\n',app.InterPulLen,app.StepSizeCurrent,strCathAnode)...
             %       app.FrontEndCurrent];
-            % 
+            %
             % fileID = fopen(fname,'w');
             % fprintf(fileID,str);
             % fclose(fileID);
@@ -1001,7 +1066,7 @@ return
         end
         
     end
-
+    
 
     % Callbacks that handle component events
     methods (Access = private)
@@ -1035,26 +1100,26 @@ return
             
             SetupClockTime(app);
             
-    app.ListBoxStimElectrodes.Items = arrayfun(@num2str,1:32,'Uni',0); %temp 
-    app.ListBoxBipolarElectrodes.Items = arrayfun(@num2str,1:32,'Uni',0);%temp 
-                
+            app.ListBoxStimElectrodes.Items = arrayfun(@num2str,1:32,'Uni',0); %temp
+            app.ListBoxBipolarElectrodes.Items = arrayfun(@num2str,1:32,'Uni',0);%temp
+            
             if ~app.DemoCheckBox.Value
                 if ~TryConnectToNIP(app)
                     msg = {'Could not connect to the NIP.','What do you wish to do?'};
                     title = 'Attention !';
                     selection = uiconfirm(app.UIFigure,msg,title, ...
-                               'Options',{'Try again','Enable Demo mode'}, ...
-                               'DefaultOption',1);
+                        'Options',{'Try again','Enable Demo mode'}, ...
+                        'DefaultOption',1);
                     switch selection
-                       case 'Try again'
-                           TryConnectToNIP(app);
-                       case 'Enable Demo mode'
-                           app.DemoCheckBox.Value = true;
+                        case 'Try again'
+                            TryConnectToNIP(app);
+                        case 'Enable Demo mode'
+                            app.DemoCheckBox.Value = true;
                     end
                 end
             end
             
-            if app.DemoCheckBox.Value 
+            if app.DemoCheckBox.Value
                 disp('Demo ON')
                 app.ListBoxStimElectrodes.Items = arrayfun(@num2str,1:32,'Uni',0);
                 app.ListBoxBipolarElectrodes.Items = arrayfun(@num2str,1:32,'Uni',0);
@@ -1091,91 +1156,91 @@ return
 
         % Button pushed function: GoButton
         function GoButtonPushed(app, event)
-%             if isempty(app.MultiStim)
-%                 LockScreenParams(app);
-%                 
-%                 if ~app.DemoCheckBox.Value
-%                     if ~StepSizeIsCorrect(app)
-%                         UpdateStepSize(app);
-%                         if ~StepSizeIsCorrect(app)
-%                             Abort(app, "Step size is incorrect.\nPlease restart.")
-%                             return
-%                         end
-%                     end
-%                     xippmex('stim','enable',1)
-%                 end
-%                 SendStim(app);
-%                 LogStim(app);
-%                 
-%                 PlayStimPlot(app);
-%                 
-%                 UnlockScreenParamsWithTimer(app);
-%             else
-                % Multistim
-                app.StopButtonWasPushed = false;
-                
-                app.MultiStimButtonNext.Enable = 'off';
-                app.MultiStimButtonPrevious.Enable = 'off';
-                
-%                 flagFirstIter = true;
-                try
-                    for i = app.MultiStim.LoadedIdx : app.MultiStim.NumOfStims
-                        ApplyLoadedConfig(app,app.MultiStim.St(i), i);
-                        app.GoButton.Enable = 'off';
-                        
-                        % Wait for gaps between stims
-    %                     if ~flagFirstIter
-    % %                         SetupStatusLabel(app,app.WaitUntilNextStim, 0)
-    % %                         WaitForSec(app, app.WaitUntilNextStim)
-    %                     end
-    %                     if ~app.DemoCheckBox.Value
-    %                         if ~StepSizeIsCorrect(app)
-    %                             UpdateStepSize(app);
-    %                             if ~StepSizeIsCorrect(app)
-    %                                 Abort(app, "Step size is incorrect.\nPlease restart.")
-    %                                 return
-    %                             end
-    %                         end
-                            xippmex('stim','enable',1)
-    %                     end
-    %                     if app.StopButtonWasPushed
-    %                         break
-    %                     end
-                        
-    % %                     SetupStatusLabel(app,app.MultiStim.St(i).Duration, 1)
-                        
-                        SendStim(app);
-                        LogStim(app);
-    %                     PlayStimPlot(app);
-                        
-                        % Wait for stim to execute
-    %                     WaitForSec(app, app.MultiStim.St(i).Duration/2)
-                        
-                        if app.StopButtonWasPushed
-                            break
-                        end
-                        flagFirstIter = false;
+            %             if isempty(app.MultiStim)
+            %                 LockScreenParams(app);
+            %
+            %                 if ~app.DemoCheckBox.Value
+            %                     if ~StepSizeIsCorrect(app)
+            %                         UpdateStepSize(app);
+            %                         if ~StepSizeIsCorrect(app)
+            %                             Abort(app, "Step size is incorrect.\nPlease restart.")
+            %                             return
+            %                         end
+            %                     end
+            %                     xippmex('stim','enable',1)
+            %                 end
+            %                 SendStim(app);
+            %                 LogStim(app);
+            %
+            %                 PlayStimPlot(app);
+            %
+            %                 UnlockScreenParamsWithTimer(app);
+            %             else
+            % Multistim
+            app.StopButtonWasPushed = false;
+            
+            app.MultiStimButtonNext.Enable = 'off';
+            app.MultiStimButtonPrevious.Enable = 'off';
+            
+            %                 flagFirstIter = true;
+            try
+                for i = app.MultiStim.LoadedIdx : app.MultiStim.NumOfStims
+                    ApplyLoadedConfig(app,app.MultiStim.St(i), i);
+                    app.GoButton.Enable = 'off';
+                    
+                    % Wait for gaps between stims
+                    %                     if ~flagFirstIter
+                    % %                         SetupStatusLabel(app,app.WaitUntilNextStim, 0)
+                    % %                         WaitForSec(app, app.WaitUntilNextStim)
+                    %                     end
+                    %                     if ~app.DemoCheckBox.Value
+                    %                         if ~StepSizeIsCorrect(app)
+                    %                             UpdateStepSize(app);
+                    %                             if ~StepSizeIsCorrect(app)
+                    %                                 Abort(app, "Step size is incorrect.\nPlease restart.")
+                    %                                 return
+                    %                             end
+                    %                         end
+                    xippmex('stim','enable',1)
+                    %                     end
+                    %                     if app.StopButtonWasPushed
+                    %                         break
+                    %                     end
+                    
+                    % %                     SetupStatusLabel(app,app.MultiStim.St(i).Duration, 1)
+                    
+                    SendStim(app);
+                    LogStim(app);
+                    %                     PlayStimPlot(app);
+                    
+                    % Wait for stim to execute
+                    %                     WaitForSec(app, app.MultiStim.St(i).Duration/2)
+                    
+                    if app.StopButtonWasPushed
+                        break
                     end
-                    fclose(app.fileID);
-                catch
-                    fclose(app.fileID);
+                    flagFirstIter = false;
                 end
-                
-                timerStatLabel = timerfind('Name','timerStatLabel');
-                if ~isempty( timerStatLabel )
-                    stop(timerStatLabel);
-                    delete(timerStatLabel);
-                end
-                timerUpdateCurrTimeLeft = timerfind('Name','timerUpdateCurrTimeLeft');
-                if ~isempty( timerUpdateCurrTimeLeft )
-                    stop(timerUpdateCurrTimeLeft);
-                    delete(timerUpdateCurrTimeLeft);
-                end
-                app.CurrStatusLabel.Text = 'All done.';
-                
-                app.GoButton.Enable = 'on';
-                CheckMultiStimPreviousNextButtons(app);
-%             end
+                fclose(app.fileID);
+            catch
+                fclose(app.fileID);
+            end
+            
+            timerStatLabel = timerfind('Name','timerStatLabel');
+            if ~isempty( timerStatLabel )
+                stop(timerStatLabel);
+                delete(timerStatLabel);
+            end
+            timerUpdateCurrTimeLeft = timerfind('Name','timerUpdateCurrTimeLeft');
+            if ~isempty( timerUpdateCurrTimeLeft )
+                stop(timerUpdateCurrTimeLeft);
+                delete(timerUpdateCurrTimeLeft);
+            end
+            app.CurrStatusLabel.Text = 'All done.';
+            
+            app.GoButton.Enable = 'on';
+            CheckMultiStimPreviousNextButtons(app);
+            %             end
         end
 
         % Value changed function: ReadyCheckBox
@@ -1203,15 +1268,15 @@ return
                 if strcmp(event.Source.Type,'uilistbox')
                     switch event.Source.UserData
                         case 'ListBoxStimElectrodes'
-%                             disp('Main')
+                            %                             disp('Main')
                             app.ElecsStim = str2double(event.Value);
                         case 'ListBoxBipolarElectrodes'
-%                             disp('Bipo')
+                            %                             disp('Bipo')
                             app.ElecsBipo = str2double(event.Value);
                     end
                 end
             end
-            app.Frequency     = app.FrequencyHzEditField.Value;    
+            app.Frequency     = app.FrequencyHzEditField.Value;
             app.Duration      = app.DurationsEditField.Value;
             app.BurstLen      = app.BurstLengthsEditField.Value;
             app.InterBurLen   = app.InterburstLengthmsEditField.Value;
@@ -1223,14 +1288,14 @@ return
             else
                 app.Amplitude     = app.AmplitudemAEditField.Value;
             end
-%             CheckUpdateFrontEndDropDown(app);
+            %             CheckUpdateFrontEndDropDown(app);
             CheckUpdateStepSizeDropDown(app);
-%             
+            %
             CheckAmplitudeIsMultipleOfStepSize(app);
             CheckAmplitudeFitsStepSize(app);
             
-%             UpdateStatusPanel(app);
-%             UpdatePlots(app);
+            %             UpdateStatusPanel(app);
+            %             UpdatePlots(app);
             
             UpdateStimCmd(app);
         end
@@ -1361,7 +1426,7 @@ return
             if ~isempty(app.FileName)
                 app.LogRowCounter = 0;
             end
-
+            
             [filename, pathname] = uigetfile( ...
                 {'*.csv;', 'CSV file (*.csv)'}, 'Pick a File to Import');
             full_filename = fullfile(pathname, filename);
@@ -1378,7 +1443,7 @@ return
                 st = struct(...
                     'FrontEnd',FE_choice,...
                     'StepSize'	,T_mat(1,2),...
-		    'Frequency'	,T_mat(1,3),...
+                    'Frequency'	,T_mat(1,3),...
                     'Amplitude' ,T_mat(1,4),...
                     'Duration'	,T_mat(1,5),...
                     'BurstLen'	,T_mat(1,6),...
@@ -1411,7 +1476,7 @@ return
             
             % Decode input, hardcoded for now
             numStims = size(T_mat,1);
-            for i = 1:numStims 
+            for i = 1:numStims
                 if ~T_mat(i,1)
                     FE_choice = 'Macro';
                 else
@@ -1420,7 +1485,7 @@ return
                 st(i) = struct(...
                     'FrontEnd',FE_choice,...
                     'StepSize'	,T_mat(i,2),...
-		    'Frequency'	,T_mat(i,3),...
+                    'Frequency'	,T_mat(i,3),...
                     'Amplitude' ,T_mat(i,4),...
                     'Duration'	,T_mat(i,5),...
                     'BurstLen'	,T_mat(i,6),...
@@ -1448,7 +1513,7 @@ return
             app.ReadyCheckBox.Value = true;
             app.GoButton.Text = 'Go Multi Stim';
             app.GoButton.BackgroundColor = [0 128 255]/255;
-%             
+            %
             ReadyCheckBoxValueChanged(app, event);
             
             app.MultiStimButtonPrevious.Visible = 'on';
@@ -1465,7 +1530,7 @@ return
 
         % Button pushed function: MultiStimButtonPrevious
         function MultiStimButtonPreviousPushed(app, event)
-
+            
             app.MultiStim.LoadedIdx = app.MultiStim.LoadedIdx - 1;
             
             CheckMultiStimPreviousNextButtons(app);
@@ -1486,6 +1551,23 @@ return
             
             app.GoButton.Enable = 'on';
         end
+
+        % Value changed function: RampCheckBox
+        function RampCheckBoxValueChanged(app, event)
+            value = app.RampCheckBox.Value;
+            if (value == 1)
+                app.RampEditField.Enable = 'on';
+            else
+                app.RampEditField.Enable = 'off';
+            end
+            
+            UpdateStimCmd(app);
+        end
+
+        % Value changed function: RampEditField
+        function RampEditFieldValueChanged(app, event)
+            UpdateStimCmd(app);
+        end
     end
 
     % Component initialization
@@ -1496,7 +1578,7 @@ return
 
             % Create UIFigure and hide until all components are created
             app.UIFigure = uifigure('Visible', 'off');
-            app.UIFigure.Position = [100 100 781 978];
+            app.UIFigure.Position = [100 40 781 1017];
             app.UIFigure.Name = 'UI Figure';
             app.UIFigure.CloseRequestFcn = createCallbackFcn(app, @UIFigureCloseRequest, true);
 
@@ -1505,7 +1587,7 @@ return
             app.StimParametersLabel.HorizontalAlignment = 'center';
             app.StimParametersLabel.FontSize = 28;
             app.StimParametersLabel.FontWeight = 'bold';
-            app.StimParametersLabel.Position = [280 939 228 40];
+            app.StimParametersLabel.Position = [280 978 228 40];
             app.StimParametersLabel.Text = 'Stim Parameters';
 
             % Create DemoCheckBox
@@ -1513,7 +1595,7 @@ return
             app.DemoCheckBox.ValueChangedFcn = createCallbackFcn(app, @DemoCheckBoxValueChanged, true);
             app.DemoCheckBox.Text = 'Demo';
             app.DemoCheckBox.FontSize = 16;
-            app.DemoCheckBox.Position = [11 877 81 22];
+            app.DemoCheckBox.Position = [11 916 81 22];
 
             % Create StatusPanel
             app.StatusPanel = uipanel(app.UIFigure);
@@ -1521,7 +1603,7 @@ return
             app.StatusPanel.BackgroundColor = [1 1 1];
             app.StatusPanel.FontAngle = 'italic';
             app.StatusPanel.FontSize = 16;
-            app.StatusPanel.Position = [11 360 230 509];
+            app.StatusPanel.Position = [11 399 230 509];
 
             % Create MainStatusLabel
             app.MainStatusLabel = uilabel(app.StatusPanel);
@@ -1588,131 +1670,131 @@ return
             app.SettingsPanel.Title = 'Settings';
             app.SettingsPanel.FontAngle = 'italic';
             app.SettingsPanel.FontSize = 16;
-            app.SettingsPanel.Position = [11 9 760 350];
+            app.SettingsPanel.Position = [11 12 760 386];
 
             % Create FrequencyHzEditFieldLabel
             app.FrequencyHzEditFieldLabel = uilabel(app.SettingsPanel);
             app.FrequencyHzEditFieldLabel.HorizontalAlignment = 'right';
             app.FrequencyHzEditFieldLabel.FontSize = 16;
-            app.FrequencyHzEditFieldLabel.Position = [51 221 116 22];
+            app.FrequencyHzEditFieldLabel.Position = [51 257 116 22];
             app.FrequencyHzEditFieldLabel.Text = 'Frequency (Hz)';
 
             % Create FrequencyHzEditField
             app.FrequencyHzEditField = uieditfield(app.SettingsPanel, 'numeric');
             app.FrequencyHzEditField.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
-            app.FrequencyHzEditField.Position = [182 221 100 22];
+            app.FrequencyHzEditField.Position = [182 257 100 22];
             app.FrequencyHzEditField.Value = 100;
 
             % Create AmplitudemAEditFieldLabel
             app.AmplitudemAEditFieldLabel = uilabel(app.SettingsPanel);
             app.AmplitudemAEditFieldLabel.HorizontalAlignment = 'right';
             app.AmplitudemAEditFieldLabel.FontSize = 16;
-            app.AmplitudemAEditFieldLabel.Position = [51 191 116 22];
+            app.AmplitudemAEditFieldLabel.Position = [51 227 116 22];
             app.AmplitudemAEditFieldLabel.Text = 'Amplitude (mA)';
 
             % Create AmplitudemAEditField
             app.AmplitudemAEditField = uieditfield(app.SettingsPanel, 'numeric');
             app.AmplitudemAEditField.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
-            app.AmplitudemAEditField.Position = [182 191 100 22];
+            app.AmplitudemAEditField.Position = [182 227 100 22];
             app.AmplitudemAEditField.Value = 1;
 
             % Create DurationsEditFieldLabel
             app.DurationsEditFieldLabel = uilabel(app.SettingsPanel);
             app.DurationsEditFieldLabel.HorizontalAlignment = 'right';
             app.DurationsEditFieldLabel.FontSize = 16;
-            app.DurationsEditFieldLabel.Position = [78 161 89 22];
+            app.DurationsEditFieldLabel.Position = [78 197 89 22];
             app.DurationsEditFieldLabel.Text = 'Duration (s)';
 
             % Create DurationsEditField
             app.DurationsEditField = uieditfield(app.SettingsPanel, 'numeric');
             app.DurationsEditField.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
-            app.DurationsEditField.Position = [182 161 100 22];
+            app.DurationsEditField.Position = [182 197 100 22];
             app.DurationsEditField.Value = 15;
 
             % Create BurstLengthsEditFieldLabel
             app.BurstLengthsEditFieldLabel = uilabel(app.SettingsPanel);
             app.BurstLengthsEditFieldLabel.HorizontalAlignment = 'right';
             app.BurstLengthsEditFieldLabel.FontSize = 16;
-            app.BurstLengthsEditFieldLabel.Position = [48 131 119 22];
+            app.BurstLengthsEditFieldLabel.Position = [48 167 119 22];
             app.BurstLengthsEditFieldLabel.Text = 'Burst Length (s)';
 
             % Create BurstLengthsEditField
             app.BurstLengthsEditField = uieditfield(app.SettingsPanel, 'numeric');
             app.BurstLengthsEditField.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
-            app.BurstLengthsEditField.Position = [182 131 100 22];
+            app.BurstLengthsEditField.Position = [182 167 100 22];
             app.BurstLengthsEditField.Value = 1;
 
             % Create InterburstLengthmsEditFieldLabel
             app.InterburstLengthmsEditFieldLabel = uilabel(app.SettingsPanel);
             app.InterburstLengthmsEditFieldLabel.HorizontalAlignment = 'right';
             app.InterburstLengthmsEditFieldLabel.FontSize = 16;
-            app.InterburstLengthmsEditFieldLabel.Position = [4 101 163 22];
+            app.InterburstLengthmsEditFieldLabel.Position = [4 137 163 22];
             app.InterburstLengthmsEditFieldLabel.Text = 'Interburst Length (ms)';
 
             % Create InterburstLengthmsEditField
             app.InterburstLengthmsEditField = uieditfield(app.SettingsPanel, 'numeric');
             app.InterburstLengthmsEditField.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
-            app.InterburstLengthmsEditField.Position = [182 101 100 22];
+            app.InterburstLengthmsEditField.Position = [182 137 100 22];
             app.InterburstLengthmsEditField.Value = 50;
 
             % Create PreStimWaitmsEditFieldLabel
             app.PreStimWaitmsEditFieldLabel = uilabel(app.SettingsPanel);
             app.PreStimWaitmsEditFieldLabel.HorizontalAlignment = 'right';
             app.PreStimWaitmsEditFieldLabel.FontSize = 16;
-            app.PreStimWaitmsEditFieldLabel.Position = [27 71 140 22];
+            app.PreStimWaitmsEditFieldLabel.Position = [27 107 140 22];
             app.PreStimWaitmsEditFieldLabel.Text = 'Pre-Stim Wait (ms)';
 
             % Create PreStimWaitmsEditField
             app.PreStimWaitmsEditField = uieditfield(app.SettingsPanel, 'numeric');
             app.PreStimWaitmsEditField.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
-            app.PreStimWaitmsEditField.Position = [182 71 100 22];
+            app.PreStimWaitmsEditField.Position = [182 107 100 22];
             app.PreStimWaitmsEditField.Value = 20;
 
             % Create PulseWidthsEditFieldLabel
             app.PulseWidthsEditFieldLabel = uilabel(app.SettingsPanel);
             app.PulseWidthsEditFieldLabel.HorizontalAlignment = 'right';
             app.PulseWidthsEditFieldLabel.FontSize = 16;
-            app.PulseWidthsEditFieldLabel.Position = [44 41 123 22];
+            app.PulseWidthsEditFieldLabel.Position = [44 77 123 22];
             app.PulseWidthsEditFieldLabel.Text = 'Pulse Width (µs)';
 
             % Create PulseWidthsEditField
             app.PulseWidthsEditField = uieditfield(app.SettingsPanel, 'numeric');
             app.PulseWidthsEditField.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
-            app.PulseWidthsEditField.Position = [182 41 100 22];
+            app.PulseWidthsEditField.Position = [182 77 100 22];
             app.PulseWidthsEditField.Value = 100;
 
             % Create InterpulseWidthsEditFieldLabel
             app.InterpulseWidthsEditFieldLabel = uilabel(app.SettingsPanel);
             app.InterpulseWidthsEditFieldLabel.HorizontalAlignment = 'right';
             app.InterpulseWidthsEditFieldLabel.FontSize = 16;
-            app.InterpulseWidthsEditFieldLabel.Position = [14 11 153 22];
+            app.InterpulseWidthsEditFieldLabel.Position = [14 47 153 22];
             app.InterpulseWidthsEditFieldLabel.Text = 'Interpulse Width (µs)';
 
             % Create InterpulseWidthsEditField
             app.InterpulseWidthsEditField = uieditfield(app.SettingsPanel, 'numeric');
             app.InterpulseWidthsEditField.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
-            app.InterpulseWidthsEditField.Position = [182 11 100 22];
+            app.InterpulseWidthsEditField.Position = [182 47 100 22];
             app.InterpulseWidthsEditField.Value = 100;
 
             % Create StimElectrodesListBoxLabel
             app.StimElectrodesListBoxLabel = uilabel(app.SettingsPanel);
             app.StimElectrodesListBoxLabel.HorizontalAlignment = 'center';
             app.StimElectrodesListBoxLabel.VerticalAlignment = 'bottom';
-            app.StimElectrodesListBoxLabel.Position = [300 298 100 22];
+            app.StimElectrodesListBoxLabel.Position = [300 334 100 22];
             app.StimElectrodesListBoxLabel.Text = 'Stim Electrodes';
 
             % Create ListBoxStimElectrodes
             app.ListBoxStimElectrodes = uilistbox(app.SettingsPanel);
             app.ListBoxStimElectrodes.Items = {};
             app.ListBoxStimElectrodes.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
-            app.ListBoxStimElectrodes.Position = [291 11 119 281];
+            app.ListBoxStimElectrodes.Position = [291 47 119 281];
             app.ListBoxStimElectrodes.Value = {};
 
             % Create BipolarElectrodesListBoxLabel
             app.BipolarElectrodesListBoxLabel = uilabel(app.SettingsPanel);
             app.BipolarElectrodesListBoxLabel.HorizontalAlignment = 'center';
             app.BipolarElectrodesListBoxLabel.VerticalAlignment = 'bottom';
-            app.BipolarElectrodesListBoxLabel.Position = [428 299 103 22];
+            app.BipolarElectrodesListBoxLabel.Position = [428 335 103 22];
             app.BipolarElectrodesListBoxLabel.Text = 'Bipolar Electrodes';
 
             % Create ListBoxBipolarElectrodes
@@ -1720,7 +1802,7 @@ return
             app.ListBoxBipolarElectrodes.Items = {};
             app.ListBoxBipolarElectrodes.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
             app.ListBoxBipolarElectrodes.Enable = 'off';
-            app.ListBoxBipolarElectrodes.Position = [420 11 119 282];
+            app.ListBoxBipolarElectrodes.Position = [420 47 119 282];
             app.ListBoxBipolarElectrodes.Value = {};
 
             % Create ExtrasPanel
@@ -1730,21 +1812,36 @@ return
             app.ExtrasPanel.Title = 'Extras';
             app.ExtrasPanel.FontAngle = 'italic';
             app.ExtrasPanel.FontSize = 14;
-            app.ExtrasPanel.Position = [551 232 200 80];
+            app.ExtrasPanel.Position = [551 248 200 100];
 
             % Create BipolarCheckBox
             app.BipolarCheckBox = uicheckbox(app.ExtrasPanel);
             app.BipolarCheckBox.ValueChangedFcn = createCallbackFcn(app, @BipolarCheckBoxValueChanged, true);
             app.BipolarCheckBox.Text = 'Bipolar';
             app.BipolarCheckBox.FontSize = 16;
-            app.BipolarCheckBox.Position = [11 32 80 22];
+            app.BipolarCheckBox.Position = [11 52 80 22];
 
             % Create CathodicFirstCheckBox
             app.CathodicFirstCheckBox = uicheckbox(app.ExtrasPanel);
             app.CathodicFirstCheckBox.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
             app.CathodicFirstCheckBox.Text = 'Cathodic First';
             app.CathodicFirstCheckBox.FontSize = 16;
-            app.CathodicFirstCheckBox.Position = [11 6 121 22];
+            app.CathodicFirstCheckBox.Position = [11 26 121 22];
+
+            % Create RampEditField
+            app.RampEditField = uieditfield(app.ExtrasPanel, 'numeric');
+            app.RampEditField.RoundFractionalValues = 'on';
+            app.RampEditField.ValueChangedFcn = createCallbackFcn(app, @RampEditFieldValueChanged, true);
+            app.RampEditField.Enable = 'off';
+            app.RampEditField.Position = [90 1 57 22];
+            app.RampEditField.Value = 3;
+
+            % Create RampCheckBox
+            app.RampCheckBox = uicheckbox(app.ExtrasPanel);
+            app.RampCheckBox.ValueChangedFcn = createCallbackFcn(app, @RampCheckBoxValueChanged, true);
+            app.RampCheckBox.Text = 'Ramp';
+            app.RampCheckBox.FontSize = 16;
+            app.RampCheckBox.Position = [11 1 65 22];
 
             % Create ControlPanel
             app.ControlPanel = uipanel(app.SettingsPanel);
@@ -1754,7 +1851,7 @@ return
             app.ControlPanel.BackgroundColor = [0.9412 0.9412 0.9412];
             app.ControlPanel.FontAngle = 'italic';
             app.ControlPanel.FontSize = 14;
-            app.ControlPanel.Position = [551 5 200 230];
+            app.ControlPanel.Position = [551 3 200 230];
 
             % Create ReadyCheckBox
             app.ReadyCheckBox = uicheckbox(app.ControlPanel);
@@ -1808,7 +1905,7 @@ return
             app.FrontEndDropDownLabel = uilabel(app.SettingsPanel);
             app.FrontEndDropDownLabel.HorizontalAlignment = 'right';
             app.FrontEndDropDownLabel.FontSize = 16;
-            app.FrontEndDropDownLabel.Position = [89 281 76 22];
+            app.FrontEndDropDownLabel.Position = [89 317 76 22];
             app.FrontEndDropDownLabel.Text = 'Front End';
 
             % Create FrontEndDropDown
@@ -1816,14 +1913,14 @@ return
             app.FrontEndDropDown.Items = {'Macro', 'Micro'};
             app.FrontEndDropDown.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
             app.FrontEndDropDown.FontSize = 14;
-            app.FrontEndDropDown.Position = [180 281 100 22];
+            app.FrontEndDropDown.Position = [180 317 100 22];
             app.FrontEndDropDown.Value = 'Macro';
 
             % Create StepSizeADropDownLabel
             app.StepSizeADropDownLabel = uilabel(app.SettingsPanel);
             app.StepSizeADropDownLabel.HorizontalAlignment = 'right';
             app.StepSizeADropDownLabel.FontSize = 16;
-            app.StepSizeADropDownLabel.Position = [56 253 109 22];
+            app.StepSizeADropDownLabel.Position = [56 289 109 22];
             app.StepSizeADropDownLabel.Text = 'Step Size (µA)';
 
             % Create StepSizeDropDown
@@ -1831,28 +1928,28 @@ return
             app.StepSizeDropDown.Items = {'1', '2', '10', '20', '50', '120'};
             app.StepSizeDropDown.ValueChangedFcn = createCallbackFcn(app, @SettingsValueChanged, true);
             app.StepSizeDropDown.FontSize = 14;
-            app.StepSizeDropDown.Position = [180 253 100 22];
+            app.StepSizeDropDown.Position = [180 289 100 22];
             app.StepSizeDropDown.Value = '1';
 
             % Create TimeLabel
             app.TimeLabel = uilabel(app.UIFigure);
             app.TimeLabel.HorizontalAlignment = 'right';
             app.TimeLabel.FontSize = 18;
-            app.TimeLabel.Position = [531 919 230 50];
+            app.TimeLabel.Position = [531 958 230 50];
             app.TimeLabel.Text = 'Time';
 
             % Create LoadButton
             app.LoadButton = uibutton(app.UIFigure, 'push');
             app.LoadButton.ButtonPushedFcn = createCallbackFcn(app, @LoadButtonPushed, true);
             app.LoadButton.FontSize = 16;
-            app.LoadButton.Position = [11 942 80 27];
+            app.LoadButton.Position = [11 981 80 27];
             app.LoadButton.Text = 'Load';
 
             % Create SaveButton
             app.SaveButton = uibutton(app.UIFigure, 'push');
             app.SaveButton.FontSize = 16;
             app.SaveButton.Enable = 'off';
-            app.SaveButton.Position = [101 942 80 27];
+            app.SaveButton.Position = [101 981 80 27];
             app.SaveButton.Text = 'Save';
 
             % Create CurrStatusLabel
@@ -1860,7 +1957,7 @@ return
             app.CurrStatusLabel.HorizontalAlignment = 'center';
             app.CurrStatusLabel.FontSize = 24;
             app.CurrStatusLabel.FontWeight = 'bold';
-            app.CurrStatusLabel.Position = [101 869 140 60];
+            app.CurrStatusLabel.Position = [101 908 140 60];
             app.CurrStatusLabel.Text = 'All Done';
 
             % Create Ax_stimComplete
@@ -1871,7 +1968,7 @@ return
             app.Ax_stimComplete.XGrid = 'on';
             app.Ax_stimComplete.YGrid = 'on';
             app.Ax_stimComplete.Box = 'on';
-            app.Ax_stimComplete.Position = [251 734 522 185];
+            app.Ax_stimComplete.Position = [251 773 522 185];
 
             % Create Ax_stimBurst
             app.Ax_stimBurst = uiaxes(app.UIFigure);
@@ -1881,7 +1978,7 @@ return
             app.Ax_stimBurst.XGrid = 'on';
             app.Ax_stimBurst.YGrid = 'on';
             app.Ax_stimBurst.Box = 'on';
-            app.Ax_stimBurst.Position = [251 550 522 185];
+            app.Ax_stimBurst.Position = [251 589 522 185];
 
             % Create Ax_stimWave
             app.Ax_stimWave = uiaxes(app.UIFigure);
@@ -1891,7 +1988,7 @@ return
             app.Ax_stimWave.XGrid = 'on';
             app.Ax_stimWave.YGrid = 'on';
             app.Ax_stimWave.Box = 'on';
-            app.Ax_stimWave.Position = [251 366 522 185];
+            app.Ax_stimWave.Position = [251 405 522 185];
 
             % Show the figure after all components are created
             app.UIFigure.Visible = 'on';
@@ -1902,7 +1999,7 @@ return
     methods (Access = public)
 
         % Construct app
-        function app = SenStimUI_v2_130Hz_and_ShortFreq
+        function app = SenStimUI_v2_fast
 
             % Create UIFigure and components
             createComponents(app)

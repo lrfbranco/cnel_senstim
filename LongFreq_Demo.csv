@@ -1,0 +1,6 @@
+Macro,StepSize,Freq,Ampl,Dur,BurstLen,InterBurstLen,PreStimLen,PulseWidth,InterPulseWidth,StimElec,BipoElec,BipoarCh,CathodeCheck,Ready,GapBetwStims
+0,120,20,3,5,0.35,150,0,100,100,1,0,0,0,1,2
+0,120,100,3,5,0.35,150,0,100,100,1,0,0,0,1,2
+0,120,200,3,5,0.35,150,0,100,100,1,0,0,0,1,2
+0,120,100,3,5,0.35,150,0,100,100,1,0,0,0,1,2
+0,120,20,3,5,0.35,150,0,100,100,1,0,0,0,1,2
