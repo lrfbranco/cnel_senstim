@@ -1,5 +1,5 @@
 
-classdef SenStimUI_v2 < matlab.apps.AppBase
+classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
@@ -40,8 +40,8 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
         ExtrasPanel                     matlab.ui.container.Panel
         BipolarCheckBox                 matlab.ui.control.CheckBox
         CathodicFirstCheckBox           matlab.ui.control.CheckBox
-        RampCheckBox                    matlab.ui.control.CheckBox
         RampEditField                   matlab.ui.control.NumericEditField
+        RampCheckBox                    matlab.ui.control.CheckBox
         ControlPanel                    matlab.ui.container.Panel
         ReadyCheckBox                   matlab.ui.control.CheckBox
         GoButton                        matlab.ui.control.Button
@@ -95,6 +95,15 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
         StopButtonWasPushed
         FileName
         LogFolder
+
+        FilePath
+        LogRowCounter
+        LogStartTime
+        fileID
+        
+        PrevNIPClockCyc
+        PrevStimCmd
+        PrevWait
     end
 
     methods (Access = private)
@@ -425,7 +434,7 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
                 app.NIPisConnected = true;
                 result = true;
                 app.PrevTimeNIP = xippmex('time');
-                pause(0.01);
+%                 pause(0.01);
             end
         end
         
@@ -589,12 +598,12 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
                 'ampSelect', 1);
             
             app.StimCmdBurst.period   = 1/(app.Frequency * NIP_timeUnits); 
+%             app.StimCmdBurst.repeats  = ceil(app.Frequency * app.BurstLen);
             if (app.RampCheckBox.Value == 1)
                 app.StimCmdBurst.repeats  = app.Frequency * app.BurstLen - ramp_n_pulse;
             else
                 app.StimCmdBurst.repeats  = app.Frequency * app.BurstLen;
             end
-            
             if app.BipolarCheckBox.Value && ~isempty(app.ElecsBipo)
                 app.StimCmdBurstBipo = app.StimCmdBurst;
                 app.StimCmdBurstBipo.elec = app.ElecsBipo;
@@ -624,7 +633,7 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
             if ~app.DemoCheckBox.Value
                 LockScreenParams(app);
                 xippmex('stim', 'enable', 0); % disable stim
-                pause(0.2);
+%                 pause(0.2);
                 dropDownItems = cell2mat(cellfun(@str2num,app.StepSizeDropDown.Items,'Uni',0));
                 idx = find(app.StepSizeCurrent==dropDownItems);
                 try
@@ -636,48 +645,54 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
                     return
                 end
                 xippmex('stim', 'enable', 1); % enable stim
-                pause(0.2);
+%                 pause(0.2);
                 UnlockScreenParams(app);
             end
         end
         
         function SendStim(app)
             % Preparing depending on Demo or not
-            app.StimCmdPreStim = []; % get rid of this for now
-            if app.DemoCheckBox.Value
-                stimFullHandle = @(~,~) disp('DEMO: xippmex(''stimseq'', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap])');
-                stimBlockHandle = @(~,~) disp('DEMO: xippmex(''stimseq'', [app.StimCmdBurst app.StimCmdGap])');
-            else    
-                if app.InterburstLengthmsEditField.Value > 0 
-                    if (app.RampCheckBox.Value == 1)
-                        stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdRamp app.StimCmdBurst app.StimCmdGap]);
-                        stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdRamp app.StimCmdBurst app.StimCmdGap]);
-                    else
-                        stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap]);
-                        stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst app.StimCmdGap]);
-                    end
-                else
-                    if (app.RampCheckBox.Value == 1)
-                        stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdRamp app.StimCmdBurst]);
-                        stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdRamp app.StimCmdBurst]);
-                    else
-                        stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst]);
-                        stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst]);
-                    end
-                end
-%                 stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdBurstBipo app.StimCmdGap]);
-%                 stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst app.StimCmdBurstBipo app.StimCmdGap]);
-            end
+% %             app.StimCmdPreStim = []; % get rid of this for now
+% %             if app.DemoCheckBox.Value
+% %                 stimFullHandle = @(~,~) disp('DEMO: xippmex(''stimseq'', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap])');
+% %                 stimBlockHandle = @(~,~) disp('DEMO: xippmex(''stimseq'', [app.StimCmdBurst app.StimCmdGap])');
+% %             else    
+% %                 if app.InterburstLengthmsEditField.Value > 0 
+% %                     stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap]);
+% %                     stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst app.StimCmdGap]);
+% %                 else
+% %                     stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst]);
+% %                     stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst]);
+% %                 end
+% % %                 stimFullHandle = @(~,~) xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdBurstBipo app.StimCmdGap]);
+% % %                 stimBlockHandle = @(~,~) xippmex('stimseq', [app.StimCmdBurst app.StimCmdBurstBipo app.StimCmdGap]);
+% %             end
+% %             
+% %             % Checking if we need scheduled stims or if they all fit into one burst
+% %             blockDuration = app.BurstLen + app.InterBurLen*1e-3; % block = (burst+gap)
+% %             timeRemainAfterInit = app.CompleteStimDuration - blockDuration;
+% %             if timeRemainAfterInit < 0 || (timeRemainAfterInit/blockDuration) < 1
+% %                 % No need for timers. Everything fits into one burst
+% %                 feval(stimFullHandle);
+% %                 % If not demo, equals => xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap])
+% %                 return
+% %             end
+%             persistent lastDurCyc
             
-            % Checking if we need scheduled stims or if they all fit into one burst
-            blockDuration = app.BurstLen + app.InterBurLen*1e-3; % block = (burst+gap)
-            timeRemainAfterInit = app.CompleteStimDuration - blockDuration;
-            if timeRemainAfterInit < 0 || (timeRemainAfterInit/blockDuration) < 1
-                % No need for timers. Everything fits into one burst
-                feval(stimFullHandle);
-                % If not demo, equals => xippmex('stimseq', [app.StimCmdPreStim app.StimCmdBurst app.StimCmdGap])
-                return
+            while (xippmex('time') - app.PrevNIPClockCyc) < ...
+                (ceil(app.PrevStimCmd.period*app.PrevStimCmd.repeats) + app.WaitUntilNextStim*30000)
+                sleep(1);
             end
+            app.PrevNIPClockCyc = xippmex('time');
+            app.PrevStimCmd = app.StimCmdBurst;
+            app.PrevWait = app.WaitUntilNextStim;
+                
+            if (app.RampCheckBox.Value == 1)
+                xippmex('stimseq',  [app.StimCmdRamp app.StimCmdBurst]);
+            else
+                xippmex('stimseq',  app.StimCmdBurst);
+            end
+            return
             
             % === Preparation ===
             % Clear previous stim timers
@@ -927,13 +942,12 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
         
         function WaitForSec(app, t)
             t_ = getQPTime;
-            while(getQPTime - t_ < (t-0.5))
-                pause(0.5);
+            while(getQPTime - t_ < (t))
+                sleep(1);
                 if app.StopButtonWasPushed 
                     return 
                 end
             end
-            pause(t-(getQPTime-t_));
         end
         
         function SetupStatusLabel(app, t, id)
@@ -992,34 +1006,63 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
         end
         
         function LogStim(app)
-            dnow = datestr(now,'HH-MM-SS');
-            if isempty(app.FileName)
-                fname = fullfile(app.LogFolder,['StLog_' dnow '_0.txt']);
+            % dnow = datestr(now,'HH-MM-SS');
+            % if isempty(app.FileName)
+            %     fname = fullfile(app.LogFolder,['StLog_' dnow '_0.txt']);
+            % else
+            %     fname = fullfile(app.LogFolder,['StLog_' app.FileName '_' dnow '_0.txt']);
+            % end
+            % id = 1;
+            % while isfile(fname)
+            %     fname(end-5:end) = [];
+            %     fname = [fname '_' num2str(id) '.txt'];
+            %     id = id +1;
+            % end
+            % 
+            % if app.CathodicFirstCheckBox.Value
+            %     strCathAnode = 'Cathodic First';
+            % else
+            %     strCathAnode = 'Anodic First';
+            % end
+            % 
+            % str = [sprintf('Freq: %d Hz\nAmpl: %.3f mA\nElectr: %d\nDuration: %.3f s\n',app.Frequency,abs(app.Amplitude),app.ElecsStim,app.Duration) ...
+            %       sprintf('Burst Length: %.3f s\nInterBurst Length (gaps): %.3f ms\n',app.BurstLen, app.InterBurLen)...
+            %       sprintf('PreStim Wait: %.3f ms\nPulseWidth: %.3f µs\n',app.PreStimLen,app.PulseWidth)...
+            %       sprintf('InterPulseWidth: %.3f µs\nStepSize: %d µA\n%s\n',app.InterPulLen,app.StepSizeCurrent,strCathAnode)...
+            %       app.FrontEndCurrent];
+            % 
+            % fileID = fopen(fname,'w');
+            % fprintf(fileID,str);
+            % fclose(fileID);
+            current_time = datetime();
+            
+            if app.LogRowCounter == 0
+                app.LogStartTime = current_time;
+                if ~isempty(app.FileName)
+                    app.FilePath = fullfile(app.LogFolder, ['StLog_' app.FileName '_' strrep(char(app.LogStartTime), ':', '_') '.txt']);
+                else
+                    app.FilePath = fullfile(app.LogFolder, ['StLog_' strrep(char(app.LogStartTime), ':', '_') '.txt']);
+                end
+                app.fileID = fopen(app.FilePath, 'a');
+                str = sprintf(['Start at ' char(app.LogStartTime) '\n'])
+                fprintf(app.fileID, str);
+                app.LogRowCounter = app.LogRowCounter + 1;
+                if app.ElecsStim < 9 %Left side
+                    str = sprintf('%d,--L-ct%02d-%dHz-%0.1fmA-%d\n', seconds(current_time - app.LogStartTime), app.ElecsStim, app.Frequency, abs(app.Amplitude), app.LogRowCounter)
+                else
+                    str = sprintf('%d,--R-ct%02d-%dHz-%0.1fmA-%d\n', seconds(current_time - app.LogStartTime), app.ElecsStim, app.Frequency, abs(app.Amplitude), app.LogRowCounter)
+                end
+                fprintf(app.fileID, str);
+                app.LogRowCounter = app.LogRowCounter + 1;
             else
-                fname = fullfile(app.LogFolder,['StLog_' app.FileName '_' dnow '_0.txt']);
+                if app.ElecsStim < 9 %Left side
+                    str = sprintf('%d,--L-ct%02d-%dHz-%0.1fmA-%d\n', seconds(current_time - app.LogStartTime), app.ElecsStim, app.Frequency, abs(app.Amplitude), app.LogRowCounter)
+                else
+                    str = sprintf('%d,--R-ct%02d-%dHz-%0.1fmA-%d\n', seconds(current_time - app.LogStartTime), app.ElecsStim, app.Frequency, abs(app.Amplitude), app.LogRowCounter)
+                end
+                fprintf(app.fileID, str);
+                app.LogRowCounter = app.LogRowCounter + 1;
             end
-            id = 1;
-            while isfile(fname)
-                fname(end-5:end) = [];
-                fname = [fname '_' num2str(id) '.txt'];
-                id = id +1;
-            end
-            
-            if app.CathodicFirstCheckBox.Value
-                strCathAnode = 'Cathodic First';
-            else
-                strCathAnode = 'Anodic First';
-            end
-            
-            str = [sprintf('Freq: %d Hz\nAmpl: %.3f mA\nElectr: %d\nDuration: %.3f s\n',app.Frequency,abs(app.Amplitude),app.ElecsStim,app.Duration) ...
-                  sprintf('Burst Length: %.3f s\nInterBurst Length (gaps): %.3f ms\n',app.BurstLen, app.InterBurLen)...
-                  sprintf('PreStim Wait: %.3f ms\nPulseWidth: %.3f µs\n',app.PreStimLen,app.PulseWidth)...
-                  sprintf('InterPulseWidth: %.3f µs\nStepSize: %d µA\n%s\n',app.InterPulLen,app.StepSizeCurrent,strCathAnode)...
-                  app.FrontEndCurrent];
-            
-            fileID = fopen(fname,'w');
-            fprintf(fileID,str);
-            fclose(fileID);
         end
         
     end
@@ -1032,6 +1075,12 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
         function startupFcn(app)
             app.UIFigure.Name = 'Stim UI v2 for Ripple - By Luciano Branco';
             % Initialize some variables
+            app.PrevNIPClockCyc=0;
+            app.PrevStimCmd=[];
+            app.PrevStimCmd.period=-Inf;
+            app.PrevStimCmd.repeats=1;
+            app.PrevWait=0;
+            
             app.StepSizeCurrent = 0;
             app.FrontEndCurrent = 0;
             app.PrevTimeNIP = 0; % Dont change this (impacts TryConnectToNIP)
@@ -1047,6 +1096,7 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
             warning('off', 'MATLAB:MKDIR:DirectoryExists');
             folder = mkdir(app.LogFolder);
             warning('on', 'MATLAB:MKDIR:DirectoryExists');
+            app.LogRowCounter = 0;
             
             SetupClockTime(app);
             
@@ -1106,70 +1156,76 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
 
         % Button pushed function: GoButton
         function GoButtonPushed(app, event)
-            if isempty(app.MultiStim)
-                LockScreenParams(app);
-                
-                if ~app.DemoCheckBox.Value
-                    if ~StepSizeIsCorrect(app)
-                        UpdateStepSize(app);
-                        if ~StepSizeIsCorrect(app)
-                            Abort(app, "Step size is incorrect.\nPlease restart.")
-                            return
-                        end
-                    end
-                    xippmex('stim','enable',1)
-                end
-                SendStim(app);
-                LogStim(app);
-                
-                PlayStimPlot(app);
-                
-                UnlockScreenParamsWithTimer(app);
-            else
+%             if isempty(app.MultiStim)
+%                 LockScreenParams(app);
+%                 
+%                 if ~app.DemoCheckBox.Value
+%                     if ~StepSizeIsCorrect(app)
+%                         UpdateStepSize(app);
+%                         if ~StepSizeIsCorrect(app)
+%                             Abort(app, "Step size is incorrect.\nPlease restart.")
+%                             return
+%                         end
+%                     end
+%                     xippmex('stim','enable',1)
+%                 end
+%                 SendStim(app);
+%                 LogStim(app);
+%                 
+%                 PlayStimPlot(app);
+%                 
+%                 UnlockScreenParamsWithTimer(app);
+%             else
                 % Multistim
                 app.StopButtonWasPushed = false;
                 
                 app.MultiStimButtonNext.Enable = 'off';
                 app.MultiStimButtonPrevious.Enable = 'off';
                 
-                flagFirstIter = true;
-                for i = app.MultiStim.LoadedIdx : app.MultiStim.NumOfStims
-                    ApplyLoadedConfig(app,app.MultiStim.St(i), i);
-                    app.GoButton.Enable = 'off';
-                    
-                    % Wait for gaps between stims
-                    if ~flagFirstIter
-                        SetupStatusLabel(app,app.WaitUntilNextStim, 0)
-                        WaitForSec(app, app.WaitUntilNextStim)
-                    end
-                    if ~app.DemoCheckBox.Value
-                        if ~StepSizeIsCorrect(app)
-                            UpdateStepSize(app);
-                            if ~StepSizeIsCorrect(app)
-                                Abort(app, "Step size is incorrect.\nPlease restart.")
-                                return
-                            end
+%                 flagFirstIter = true;
+                try
+                    for i = app.MultiStim.LoadedIdx : app.MultiStim.NumOfStims
+                        ApplyLoadedConfig(app,app.MultiStim.St(i), i);
+                        app.GoButton.Enable = 'off';
+                        
+                        % Wait for gaps between stims
+    %                     if ~flagFirstIter
+    % %                         SetupStatusLabel(app,app.WaitUntilNextStim, 0)
+    % %                         WaitForSec(app, app.WaitUntilNextStim)
+    %                     end
+    %                     if ~app.DemoCheckBox.Value
+    %                         if ~StepSizeIsCorrect(app)
+    %                             UpdateStepSize(app);
+    %                             if ~StepSizeIsCorrect(app)
+    %                                 Abort(app, "Step size is incorrect.\nPlease restart.")
+    %                                 return
+    %                             end
+    %                         end
+                            xippmex('stim','enable',1)
+    %                     end
+    %                     if app.StopButtonWasPushed
+    %                         break
+    %                     end
+                        
+    % %                     SetupStatusLabel(app,app.MultiStim.St(i).Duration, 1)
+                        
+                        SendStim(app);
+                        LogStim(app);
+    %                     PlayStimPlot(app);
+                        
+                        % Wait for stim to execute
+    %                     WaitForSec(app, app.MultiStim.St(i).Duration/2)
+                        
+                        if app.StopButtonWasPushed
+                            break
                         end
-                        xippmex('stim','enable',1)
+                        flagFirstIter = false;
                     end
-                    if app.StopButtonWasPushed
-                        break
-                    end
-                    
-                    SetupStatusLabel(app,app.MultiStim.St(i).Duration, 1)
-                    
-                    SendStim(app);
-                    LogStim(app);
-                    PlayStimPlot(app);
-                    
-                    % Wait for stim to execute
-                    WaitForSec(app, app.MultiStim.St(i).Duration)
-                    
-                    if app.StopButtonWasPushed
-                        break
-                    end
-                    flagFirstIter = false;
+                    fclose(app.fileID);
+                catch
+                    fclose(app.fileID);
                 end
+                
                 timerStatLabel = timerfind('Name','timerStatLabel');
                 if ~isempty( timerStatLabel )
                     stop(timerStatLabel);
@@ -1184,7 +1240,7 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
                 
                 app.GoButton.Enable = 'on';
                 CheckMultiStimPreviousNextButtons(app);
-            end
+%             end
         end
 
         % Value changed function: ReadyCheckBox
@@ -1232,14 +1288,14 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
             else
                 app.Amplitude     = app.AmplitudemAEditField.Value;
             end
-            CheckUpdateFrontEndDropDown(app);
+%             CheckUpdateFrontEndDropDown(app);
             CheckUpdateStepSizeDropDown(app);
-            
+%             
             CheckAmplitudeIsMultipleOfStepSize(app);
             CheckAmplitudeFitsStepSize(app);
             
-            UpdateStatusPanel(app);
-            UpdatePlots(app);
+%             UpdateStatusPanel(app);
+%             UpdatePlots(app);
             
             UpdateStimCmd(app);
         end
@@ -1367,6 +1423,10 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
 
         % Button pushed function: LoadButton
         function LoadButtonPushed(app, event)
+            if ~isempty(app.FileName)
+                app.LogRowCounter = 0;
+            end
+
             [filename, pathname] = uigetfile( ...
                 {'*.csv;', 'CSV file (*.csv)'}, 'Pick a File to Import');
             full_filename = fullfile(pathname, filename);
@@ -1490,6 +1550,23 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
             ApplyLoadedConfig(app,app.MultiStim.St(app.MultiStim.LoadedIdx), app.MultiStim.LoadedIdx);
             
             app.GoButton.Enable = 'on';
+        end
+
+        % Value changed function: RampCheckBox
+        function RampCheckBoxValueChanged(app, event)
+            value = app.RampCheckBox.Value;
+            if (value == 1)
+                app.RampEditField.Enable = 'on';
+            else
+                app.RampEditField.Enable = 'off';
+            end
+            
+            UpdateStimCmd(app);
+        end
+
+        % Value changed function: RampEditField
+        function RampEditFieldValueChanged(app, event)
+            UpdateStimCmd(app);
         end
     end
 
@@ -1751,18 +1828,20 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
             app.CathodicFirstCheckBox.FontSize = 16;
             app.CathodicFirstCheckBox.Position = [11 26 121 22];
 
-            % Create RampCheckBox
-            app.RampCheckBox = uicheckbox(app.ExtrasPanel);
-            app.RampCheckBox.Text = 'Ramp';
-            app.RampCheckBox.FontSize = 16;
-            app.RampCheckBox.Position = [11 1 65 22];
-
             % Create RampEditField
             app.RampEditField = uieditfield(app.ExtrasPanel, 'numeric');
             app.RampEditField.RoundFractionalValues = 'on';
+            app.RampEditField.ValueChangedFcn = createCallbackFcn(app, @RampEditFieldValueChanged, true);
             app.RampEditField.Enable = 'off';
             app.RampEditField.Position = [90 1 57 22];
             app.RampEditField.Value = 3;
+
+            % Create RampCheckBox
+            app.RampCheckBox = uicheckbox(app.ExtrasPanel);
+            app.RampCheckBox.ValueChangedFcn = createCallbackFcn(app, @RampCheckBoxValueChanged, true);
+            app.RampCheckBox.Text = 'Ramp';
+            app.RampCheckBox.FontSize = 16;
+            app.RampCheckBox.Position = [11 1 65 22];
 
             % Create ControlPanel
             app.ControlPanel = uipanel(app.SettingsPanel);
@@ -1920,7 +1999,7 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = SenStimUI_v2
+        function app = SenStimUI_v2_130Hz_and_ShortFreq
 
             % Create UIFigure and components
             createComponents(app)
