@@ -1,5 +1,5 @@
 
-classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
+classdef SenStimUI_v2_fast < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
@@ -1999,7 +1999,7 @@ classdef SenStimUI_v2_130Hz_and_ShortFreq < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = SenStimUI_v2_130Hz_and_ShortFreq
+        function app = SenStimUI_v2_fast
 
             % Create UIFigure and components
             createComponents(app)

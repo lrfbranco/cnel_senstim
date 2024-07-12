@@ -1491,6 +1491,23 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
             
             app.GoButton.Enable = 'on';
         end
+
+        % Value changed function: RampEditField
+        function RampEditFieldValueChanged(app, event)
+           UpdateStimCmd(app);
+        end
+
+        % Value changed function: RampCheckBox
+        function RampCheckBoxValueChanged(app, event)
+            value = app.RampCheckBox.Value;
+            if (value == 1)
+                app.RampEditField.Enable = 'on';
+            else
+                app.RampEditField.Enable = 'off';
+            end
+            
+            UpdateStimCmd(app);
+        end
     end
 
     % Component initialization
@@ -1753,6 +1770,7 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
 
             % Create RampCheckBox
             app.RampCheckBox = uicheckbox(app.ExtrasPanel);
+            app.RampCheckBox.ValueChangedFcn = createCallbackFcn(app, @RampCheckBoxValueChanged, true);
             app.RampCheckBox.Text = 'Ramp';
             app.RampCheckBox.FontSize = 16;
             app.RampCheckBox.Position = [11 1 65 22];
@@ -1760,6 +1778,7 @@ classdef SenStimUI_v2 < matlab.apps.AppBase
             % Create RampEditField
             app.RampEditField = uieditfield(app.ExtrasPanel, 'numeric');
             app.RampEditField.RoundFractionalValues = 'on';
+            app.RampEditField.ValueChangedFcn = createCallbackFcn(app, @RampEditFieldValueChanged, true);
             app.RampEditField.Enable = 'off';
             app.RampEditField.Position = [90 1 57 22];
             app.RampEditField.Value = 3;
