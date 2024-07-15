@@ -4,6 +4,9 @@ classdef SenStimUI_v2_fast < matlab.apps.AppBase
     % Properties that correspond to app components
     properties (Access = public)
         UIFigure                        matlab.ui.Figure
+        Ax_stimComplete                 matlab.ui.control.UIAxes
+        Ax_stimBurst                    matlab.ui.control.UIAxes
+        Ax_stimWave                     matlab.ui.control.UIAxes
         StimParametersLabel             matlab.ui.control.Label
         DemoCheckBox                    matlab.ui.control.CheckBox
         StatusPanel                     matlab.ui.container.Panel
@@ -56,9 +59,6 @@ classdef SenStimUI_v2_fast < matlab.apps.AppBase
         LoadButton                      matlab.ui.control.Button
         SaveButton                      matlab.ui.control.Button
         CurrStatusLabel                 matlab.ui.control.Label
-        Ax_stimComplete                 matlab.ui.control.UIAxes
-        Ax_stimBurst                    matlab.ui.control.UIAxes
-        Ax_stimWave                     matlab.ui.control.UIAxes
     end
 
 
@@ -470,6 +470,8 @@ classdef SenStimUI_v2_fast < matlab.apps.AppBase
             app.ListBoxBipolarElectrodes.Tag    = 'EditableFields';
             app.BipolarCheckBox.Tag             = 'EditableFields';
             app.CathodicFirstCheckBox.Tag       = 'EditableFields';
+            app.RampCheckBox.Tag                = 'EditableFields';
+            app.RampEditField.Tag               = 'EditableFields';
             app.FrontEndDropDown.Tag            = 'EditableFields';
             app.StepSizeDropDown.Tag            = 'EditableFields';
             app.GoButton.Tag                    = 'EditableFields';
@@ -1582,6 +1584,36 @@ classdef SenStimUI_v2_fast < matlab.apps.AppBase
             app.UIFigure.Name = 'UI Figure';
             app.UIFigure.CloseRequestFcn = createCallbackFcn(app, @UIFigureCloseRequest, true);
 
+            % Create Ax_stimComplete
+            app.Ax_stimComplete = uiaxes(app.UIFigure);
+            title(app.Ax_stimComplete, 'Complete Stim')
+            xlabel(app.Ax_stimComplete, 'Time (s)')
+            ylabel(app.Ax_stimComplete, 'Amplitude (mA)')
+            app.Ax_stimComplete.Box = 'on';
+            app.Ax_stimComplete.XGrid = 'on';
+            app.Ax_stimComplete.YGrid = 'on';
+            app.Ax_stimComplete.Position = [251 773 522 185];
+
+            % Create Ax_stimBurst
+            app.Ax_stimBurst = uiaxes(app.UIFigure);
+            title(app.Ax_stimBurst, 'Stim burst')
+            xlabel(app.Ax_stimBurst, 'Time (ms)')
+            ylabel(app.Ax_stimBurst, 'Amplitude (mA)')
+            app.Ax_stimBurst.Box = 'on';
+            app.Ax_stimBurst.XGrid = 'on';
+            app.Ax_stimBurst.YGrid = 'on';
+            app.Ax_stimBurst.Position = [251 589 522 185];
+
+            % Create Ax_stimWave
+            app.Ax_stimWave = uiaxes(app.UIFigure);
+            title(app.Ax_stimWave, 'Stim waveform')
+            xlabel(app.Ax_stimWave, 'Time (µs)')
+            ylabel(app.Ax_stimWave, 'Amplitude (mA)')
+            app.Ax_stimWave.Box = 'on';
+            app.Ax_stimWave.XGrid = 'on';
+            app.Ax_stimWave.YGrid = 'on';
+            app.Ax_stimWave.Position = [251 405 522 185];
+
             % Create StimParametersLabel
             app.StimParametersLabel = uilabel(app.UIFigure);
             app.StimParametersLabel.HorizontalAlignment = 'center';
@@ -1959,36 +1991,6 @@ classdef SenStimUI_v2_fast < matlab.apps.AppBase
             app.CurrStatusLabel.FontWeight = 'bold';
             app.CurrStatusLabel.Position = [101 908 140 60];
             app.CurrStatusLabel.Text = 'All Done';
-
-            % Create Ax_stimComplete
-            app.Ax_stimComplete = uiaxes(app.UIFigure);
-            title(app.Ax_stimComplete, 'Complete Stim')
-            xlabel(app.Ax_stimComplete, 'Time (s)')
-            ylabel(app.Ax_stimComplete, 'Amplitude (mA)')
-            app.Ax_stimComplete.XGrid = 'on';
-            app.Ax_stimComplete.YGrid = 'on';
-            app.Ax_stimComplete.Box = 'on';
-            app.Ax_stimComplete.Position = [251 773 522 185];
-
-            % Create Ax_stimBurst
-            app.Ax_stimBurst = uiaxes(app.UIFigure);
-            title(app.Ax_stimBurst, 'Stim burst')
-            xlabel(app.Ax_stimBurst, 'Time (ms)')
-            ylabel(app.Ax_stimBurst, 'Amplitude (mA)')
-            app.Ax_stimBurst.XGrid = 'on';
-            app.Ax_stimBurst.YGrid = 'on';
-            app.Ax_stimBurst.Box = 'on';
-            app.Ax_stimBurst.Position = [251 589 522 185];
-
-            % Create Ax_stimWave
-            app.Ax_stimWave = uiaxes(app.UIFigure);
-            title(app.Ax_stimWave, 'Stim waveform')
-            xlabel(app.Ax_stimWave, 'Time (µs)')
-            ylabel(app.Ax_stimWave, 'Amplitude (mA)')
-            app.Ax_stimWave.XGrid = 'on';
-            app.Ax_stimWave.YGrid = 'on';
-            app.Ax_stimWave.Box = 'on';
-            app.Ax_stimWave.Position = [251 405 522 185];
 
             % Show the figure after all components are created
             app.UIFigure.Visible = 'on';
